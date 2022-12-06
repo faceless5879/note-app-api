@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: >
   sam-app
@@ -11,31 +11,147 @@ Globals:
     Timeout: 3
 
 Resources:
-  HelloWorldFunction:
+  NoteApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        ApiKeyRequired: true
+        UsagePlan:
+          CreateUsagePlan: PER_API
+          Description: Usage plan for this API
+
+  GetNoteFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: hello_world/
-      Handler: app.lambda_handler
+      CodeUri: get_note/
+      Handler: get_note.lambda_handler
       Runtime: python3.9
       Architectures:
         - x86_64
       Events:
-        HelloWorld:
+        ApiKey:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
-            Path: /hello
+            RestApiId: !Ref NoteApi
+            Path: /note
             Method: get
+            Auth:
+              ApiKeyRequired: true
+
+  PostNoteFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: post_note/
+      Handler: post_note.lambda_handler
+      Runtime: python3.9
+      Architectures:
+        - x86_64
+      Events:
+        ApiKey:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            RestApiId: !Ref NoteApi
+            Path: /note
+            Method: post
+            Auth:
+              ApiKeyRequired: true
+
+  PutNoteFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: put_note/
+      Handler: put_note.lambda_handler
+      Runtime: python3.9
+      Architectures:
+        - x86_64
+      Events:
+        ApiKey:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            RestApiId: !Ref NoteApi
+            Path: /note
+            Method: put
+            Auth:
+              ApiKeyRequired: true
+
+  DelNoteFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: del_note/
+      Handler: del_note.lambda_handler
+      Runtime: python3.9
+      Architectures:
+        - x86_64
+      Events:
+        ApiKey:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            RestApiId: !Ref NoteApi
+            Path: /note
+            Method: delete
+            Auth:
+              ApiKeyRequired: true
+  GetApiKeyLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/ReadOnlyAccess
+
+  GetApiKeyValueFunc:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: >
+          const AWS = require("aws-sdk");
+          const response = require("cfn-response");
+
+          exports.handler = (event, context) => {
+            const apiGateway = new AWS.APIGateway();
+            apiGateway.getApiKey(
+              {
+                apiKey: event.ResourceProperties.ApiKeyId,
+                includeValue: true
+              },
+              function (err, ApiKeyData) {
+                if (err) {
+                  console.log(err, err.stack);
+                  response.send(event, context, response.FAILED, {});
+                } else {
+                  response.send(event, context, response.SUCCESS, {
+                    Value: ApiKeyData.value
+                  });
+                }
+              }
+            );
+          };
+      Handler: index.handler
+      Runtime: nodejs12.x
+      Timeout: 30
+      Role: !GetAtt GetApiKeyLambdaExecutionRole.Arn
+
+  GetApiKeyValue:
+    Type: Custom::GetApiKeyValue
+    Properties:
+      ServiceToken: !GetAtt GetApiKeyValueFunc.Arn
+      ApiKeyId: !Ref NoteApiApiKey
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  HelloWorldApi:
-    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
-  HelloWorldFunction:
-    Description: "Hello World Lambda Function ARN"
-    Value: !GetAtt HelloWorldFunction.Arn
-  HelloWorldFunctionIamRole:
-    Description: "Implicit IAM Role created for Hello World function"
-    Value: !GetAtt HelloWorldFunctionRole.Arn
+  NoteApiEndpoint:
+    Description: "API Gateway endpoint URL for Prod stage for Notes function"
+    Value: !Sub "https://${NoteApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/note/"
+  RestApiKey:
+    Value: !GetAtt GetApiKeyValue.Value
