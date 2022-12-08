@@ -7,20 +7,27 @@ __TableName__ = os.environ["TABLE_NAME"]
 
 
 def lambda_handler(event, context):
-    print(ddb)
-    print(__TableName__)
+    reqBody = json.loads(event["body"])
+
+    if not reqBody["id"]:
+        return {
+            "statusCode": 400,
+            "body": json.dumps({"Message": "Invalid request"}),
+        }
+
+    noteId = reqBody["id"]
+    noteContent = reqBody["content"]
+    item = {
+        "UUID": {"S": noteId},
+        "UserName": {"S": "User"},
+        "NoteContent": {"S": noteContent},
+        "IsDelete": {"BOOL": True},
+    }
     try:
-        res = ddb.get_item(
-            TableName=__TableName__,
-            Key={"UUID": {"S": "Note"}, "UserName": {"S": "User"}},
-            AttributesToGet=[
-                "NoteContent",
-            ],
-        )
-        print(res)
+        ddb.put_item(TableName=__TableName__, Item=item)
     except:
-        print("Cannot get item")
+        print("Cannot connect DB")
     return {
         "statusCode": 200,
-        "body": json.dumps({"message": "hello world"}),
+        "body": json.dumps(item),
     }

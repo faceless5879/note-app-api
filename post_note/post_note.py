@@ -20,6 +20,7 @@ def lambda_handler(event, context):
         "UUID": {"S": noteId},
         "UserName": {"S": "User"},
         "NoteContent": {"S": noteContent},
+        "IsDelete": {"BOOL": False},
     }
     try:
         ddb.put_item(TableName=__TableName__, Item=item)
