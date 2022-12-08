@@ -1,6 +1,9 @@
 # Note App API
 
 This app is an BE API server for note taking app. Build by **SAM** and **AWS Lambda**
+
+---
+
 To build and deploy your application for the first time, run the following in your shell:
 
 ```bash

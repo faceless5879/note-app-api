@@ -5,12 +5,56 @@ Description: >
 
   Sample SAM Template for sam-app
 
+Parameters:
+  Env:
+    Type: String
+    Default: local
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
-    Timeout: 3
+    Timeout: 60
 
 Resources:
+  LambdaFuncRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: LambdaFuncRole
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:List*
+                  - dynamodb:DescribeReservedCapacity*
+                  - dynamodb:DescribeLimits
+                  - dynamodb:DescribeTimeToLive
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - dynamodb:BatchGet*
+                  - dynamodb:DescribeStream
+                  - dynamodb:DescribeTable
+                  - dynamodb:Get*
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:BatchWrite*
+                  - dynamodb:CreateTable
+                  - dynamodb:Delete*
+                  - dynamodb:Update*
+                  - dynamodb:PutItem
+                Resource: !GetAtt NoteDynamoTable.Arn
+
   NoteApi:
     Type: AWS::Serverless::Api
     Properties:
@@ -29,6 +73,10 @@ Resources:
       Runtime: python3.9
       Architectures:
         - x86_64
+      Role: !GetAtt LambdaFuncRole.Arn
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref NoteDynamoTable
       Events:
         ApiKey:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
@@ -47,6 +95,10 @@ Resources:
       Runtime: python3.9
       Architectures:
         - x86_64
+      Role: !GetAtt LambdaFuncRole.Arn
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref NoteDynamoTable
       Events:
         ApiKey:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
@@ -65,6 +117,10 @@ Resources:
       Runtime: python3.9
       Architectures:
         - x86_64
+      Role: !GetAtt LambdaFuncRole.Arn
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref NoteDynamoTable
       Events:
         ApiKey:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
@@ -83,6 +139,10 @@ Resources:
       Runtime: python3.9
       Architectures:
         - x86_64
+      Role: !GetAtt LambdaFuncRole.Arn
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref NoteDynamoTable
       Events:
         ApiKey:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
@@ -92,6 +152,25 @@ Resources:
             Method: delete
             Auth:
               ApiKeyRequired: true
+
+  NoteDynamoTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: "notedb"
+      AttributeDefinitions:
+        - AttributeName: "Email"
+          AttributeType: "S"
+        - AttributeName: "Name"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "Email"
+          KeyType: "HASH"
+        - AttributeName: "Name"
+          KeyType: "RANGE"
+      ProvisionedThroughput:
+        ReadCapacityUnits: "3"
+        WriteCapacityUnits: "3"
+
   GetApiKeyLambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
