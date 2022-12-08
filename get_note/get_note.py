@@ -7,13 +7,15 @@ __TableName__ = os.environ["TABLE_NAME"]
 
 
 def lambda_handler(event, context):
-
+    try:
+        allRecord = ddb.scan(
+            TableName=__TableName__,
+            AttributesToGet=["NoteContent", "UUID"],
+        )
+    except:
+        print("Cannot connect to DB")
     return {
         "statusCode": 200,
-        "body": json.dumps(
-            {
-                "message": "hello world",
-                # "location": ip.text.replace("\n", "")
-            }
-        ),
+        "headers": {"Content-Type": "application/json"},
+        "body": json.dumps(allRecord["Items"]),
     }

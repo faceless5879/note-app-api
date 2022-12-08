@@ -158,14 +158,14 @@ Resources:
     Properties:
       TableName: "notedb"
       AttributeDefinitions:
-        - AttributeName: "Email"
+        - AttributeName: "UUID"
           AttributeType: "S"
-        - AttributeName: "Name"
+        - AttributeName: "UserName"
           AttributeType: "S"
       KeySchema:
-        - AttributeName: "Email"
+        - AttributeName: "UUID"
           KeyType: "HASH"
-        - AttributeName: "Name"
+        - AttributeName: "UserName"
           KeyType: "RANGE"
       ProvisionedThroughput:
         ReadCapacityUnits: "3"

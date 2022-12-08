@@ -12,7 +12,7 @@ def lambda_handler(event, context):
     try:
         res = ddb.get_item(
             TableName=__TableName__,
-            Key={"Email": {"S": "Note"}, "Name": {"S": "User"}},
+            Key={"UUID": {"S": "Note"}, "UserName": {"S": "User"}},
             AttributesToGet=[
                 "NoteContent",
             ],
